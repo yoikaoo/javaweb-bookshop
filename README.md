@@ -84,153 +84,30 @@
 + 导入工具类Jdbcutils、相关配置文件
 + 通过JdbcUtilsTest类进行测试  
 + 导入BaseDAO（这里自己手写）
-```java
-package yoika.dao;
-
-import org.apache.commons.dbutils.QueryRunner;
-import org.apache.commons.dbutils.handlers.BeanHandler;
-import org.apache.commons.dbutils.handlers.BeanListHandler;
-import org.apache.commons.dbutils.handlers.ScalarHandler;
-import yoika.utils.JdbcUtils;
-
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.List;
-
-public class BaseDAO {
-    private QueryRunner queryRunner = new QueryRunner();
-
-    //update()方法执行 Insert/Update/Delete语句
-    public int update(String sql,Object... args){
-    //使用JdbcUtils工具类创建连接池
-    //与数据库进行连接
-        Connection connection = JdbcUtils.getConnection();
-        try {
-            return queryRunner.update(connection,sql,args);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }finally {
-            JdbcUtils.close(connection);
-        }
-     //返回-1执行失败
-        return  -1;
-    }
-
-   //查询返回一个 javaBean 的 sql 语句（查询结果为一列）
-    public <T> Object queryForOne(Class<T> type,String sql,Object...args){
-        Connection connection = JdbcUtils.getConnection();
-
-        try {
-            return  queryRunner.query(connection,sql,args,new BeanHandler<T>(type));
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }finally {
-            JdbcUtils.close(connection);
-        }
-           return  null;
-    }
-
-   //查询返回多个javaBean的sql语句（查询结果为多列）
-    public <T> List<T> queryForList(Class<T> type,String sql,Object... args ){
-        Connection connection = JdbcUtils.getConnection();
-        try {
-            queryRunner.query(connection,sql,new BeanListHandler<T>(type),args);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }finally {
-            JdbcUtils.close(connection);
-        }
-   return null;
-    }
-
-  //查询返回一列一行的sql语句
-
-  public Object queryForSingleValue(String sql, Object... args){
-      Connection conn = JdbcUtils.getConnection();
-      try {
-          return queryRunner.query(conn, sql, new ScalarHandler(), args);
-      } catch (Exception e) {
-          e.printStackTrace();
-      } finally {
-          JdbcUtils.close(conn);
-      }
-      return null;
-  }
-}
-```
 + 编写操作用户表的UserDAO
 UserDAO直接与存储用户数据的用户表进行交互。实现如下功能：
     1. 注册：将用户输入的用户名、密码、邮箱添加进用户表
     2. 判断用户是否存在：查询用户表中是否有与用户输入的用户名相一致的字段
     3. 判断用户账号密码是否输入正确：查询用户表中是否有与用户输入的用户名、密码相一致的字段
-```java
-package yoika.dao;
-import yoika.Bean.userbean;
-public class UserDAO extends BaseDAO{
-
-    //注册:注册成功返回1，注册失败返回-1
-
-    public int saveUser(userbean user){
-     String sql="insert into t_user(`username`,`password`,`email`) values(?,?,?)";
-     return update(sql,user.getUsername(),user.getPassword(),user.getEmail() );
-
-    }
-
-   //判断用户是否存在：不存在返回null，存在返回匹配的javabean
-    public Object queryForUsername(String usename){
-        String sql ="select * from t_user where username=?";
-        return queryForOne(userbean.class,sql,usename);
-    }
-   //判断用户名/密码是否输入正确：不正确返回null，正确存在返回匹配的javabean
-     public  Object queryForUsernameAndPassword(String username,String password){
-        String sql="select * from t_user where username=? and password=?";
-       return  queryForOne(userbean.class,sql,username,password);
-     }
-}
-```
 + UserDAOTest类进行测试
 
 #### Service层：编写UesrService， 封装UserDAO中的方法
-```java
-package yoika.service;
-
-
-import yoika.Bean.userbean;
-import yoika.dao.UserDAO;
-
-public class UserService {
-   //创建UserDAO对象
-    UserDAO userDAO = new UserDAO();
-
-   //注册
-   //被注册返回false
-    public boolean registUser(userbean user){
-        int i = userDAO.saveUser(user);
-       if (i==-1){
-           return false;
-       }else {
-           return true;
-       }
-    }
-
-    //判断用户是否存在
-    //不存在返回false
-    public  boolean existUser(String username){
-        if (userDAO.queryForUsername(username)==null){
-            return false;
-        }else {
-            return true;
-        }
-    }
-   //判断用户名/密码是否输入正确
-   //不正确返回false
-   public boolean login(String username,String password){
-       if(userDAO.queryForUsernameAndPassword(username,password)==null){
-         return false;
-       }else {
-           return true;
-       }
-   }
-}
-```
 + 测试UserService
+#### Web层：编写实现登录/注册功能的Servlet程序
++ 实现注册功能的Servelt程序
+    +RegisterServlet:
+    1. 获取用户请求的数据
+    2. 判断验证码是否正确
+         + 错误：返回注册页面并提示
+         + 正确：判断注册用户是否已经被注册 
+             + 错误：返回注册页面并提示
+             + 正确：跳转到注册成功页面 
++ 实现登录功能的Servlet程序
+    + LoginServlet: 
+    1. 获取用户请求信息
+    2. 判断用户是否存在
+        + 不存在：返回登入页面并提示
+        + 存在：判断用户账号密码是否输入正确
+            + 正确：跳转登入成功页面
+            + 错误：返回登入页面并提示
+
