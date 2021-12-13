@@ -95,7 +95,7 @@ UserDAO直接与存储用户数据的用户表进行交互。实现如下功能�
 + 测试UserService
 #### Web层：编写实现登录/注册功能的Servlet程序
 + 实现注册功能的Servelt程序
-    +RegisterServlet:
+    + RegisterServlet:
     1. 获取用户请求的数据
     2. 判断验证码是否正确
          + 错误：返回注册页面并提示
